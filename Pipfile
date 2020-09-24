@@ -11,6 +11,8 @@ selenium = "==3.141"
 requests = "*"
 beautifulsoup4 = "*"
 ipykernel = "*"
+http-request-randomizer = "*"
+nbconvert = "*"
 
 [requires]
 python_version = "3.8"

@@ -1,30 +1,43 @@
-import pyautogui, os, requests, re
-from msedge.selenium_tools import Edge, EdgeOptions
-from time import sleep
+import pyautogui, os, requests, re, random
+from msedge.selenium_tools import Edge, EdgeOptions, webdriver
+from time import sleep, time
 from bs4 import BeautifulSoup
+from http_request_randomizer.requests.proxy.requestProxy import RequestProxy
 from pprint import pprint
 from collections import OrderedDict
 
 
-def Download(path, url):
+def Download(path, url, proxy):
     # add edgedriver_win46/msedgedriver.exe to path
     options = EdgeOptions()
     options.use_chromium = True
     unpacked_extension_path = os.path.join(os.getcwd(), "markdown-clipper")
     options.add_argument("--load-extension={}".format(unpacked_extension_path))
+    options.add_argument("--proxy-server=http://{}".format(proxy))
     download_path = os.path.join(os.getcwd(), "Markdown Output\\", path)
-    prefs = {"download.default_directory": download_path}
+    prefs = {"download.default_directory": download_path, "profile.default_content_settings.popups": 0, "directory_upgrade": True}
     options.add_experimental_option("prefs", prefs)
+    options.add_experimental_option("detach", True)
     driver = Edge(options=options)
 
     driver.get(url)
     sleep(5)
+
+    # # click to close agree cookies
+    # extn = [899, 1040]
+    # pyautogui.click(x=extn[0], y=extn[1], clicks=1, interval=0.0, button="left")
+    # sleep(5)
+
+    # click on markdown clipper extension icon
+    CloseAds(driver)
     extn = [714, 72]
-    # print(extn)
     pyautogui.click(x=extn[0], y=extn[1], clicks=1, interval=0.0, button="left")
     sleep(2)
+
+    # click on save button for download dialog, mouse is automatically over save button
     extn = pyautogui.position()
     pyautogui.click(x=extn[0], y=extn[1], clicks=1, interval=0.0, button="left")
+    driver.close()
 
 
 def make_dir(path):
@@ -32,12 +45,33 @@ def make_dir(path):
     os.makedirs(download_path, exist_ok=True)
 
 
+def CloseAds(driver):
+    agree = driver.find_elements_by_xpath('//*[@id="catapult-cookie-bar"]/div/div')
+    join = driver.find_elements_by_xpath("/html/body/div[9]/div/div/button")
+
+    if agree:
+        try:
+            agree[0].click()
+        except Exception:
+            pass
+    if join:
+        try:
+            join[0].click()
+        except Exception:
+            pass
+
+
 # def Crawl(url, pattern):
 def Crawl(url):
-    req = requests.get(url)
+
+    req_proxy = RequestProxy()
+    proxies = req_proxy.get_proxy_list()
+    proxy = random.choice(proxies).get_address()
+
+    req = req_proxy.generate_proxied_request(url)
     soup = BeautifulSoup(req.text, "html.parser")
     course = soup.title.text.split("|")[0].strip()
-
+    print(course)
     # gets all links directly
     # for link in soup.find_all("a", {"href": re.compile(pattern)}):
     #     print(link.get("href"))
@@ -65,11 +99,6 @@ def Crawl(url):
     for link in links_list:
         links_index.append([index for index, num in enumerate(title_list) if link in num][0])
 
-    # Make Output Directories
-    # for i in unit_index:
-    #     path = course + "\\" + title_list[i]
-    #     print(path)
-
     for i, unit in enumerate(unit_index):
         for link in links_index:
             try:
@@ -80,7 +109,8 @@ def Crawl(url):
                     path_to_download = course + "\\" + title_list[unit]
                     link_to_download = links_list[title_list[link]]
                     make_dir(path_to_download)
-                    Download(path_to_download, link_to_download)
+                    Download(path_to_download, link_to_download, proxy)
+                    # sleep(10)
             except (IndexError, ValueError):
                 break
 
