@@ -1,28 +1,29 @@
-import pyautogui, os, requests, re, random
+import pyautogui, os, requests, re
 from selenium import webdriver
 from selenium.webdriver import Chrome
-from time import sleep, time
+from time import sleep
 from itertools import cycle
 from bs4 import BeautifulSoup
 from http_request_randomizer.requests.proxy.requestProxy import RequestProxy
-from pprint import pprint
 from collections import OrderedDict
 
 
-def init_proxy():
+def Init_Proxy():
     req_proxy = RequestProxy()
     proxies = req_proxy.get_proxy_list()
     proxy_cycle = cycle(proxies)
     return proxy_cycle
 
 
-def make_dir(path):
+def Make_Directory(path):
     download_path = os.path.join(os.getcwd(), "Markdown Output\\", path)
     os.makedirs(download_path, exist_ok=True)
 
 
-def CloseAds(driver):
+def Prepare_Page(driver):
+    # agree - close accept cookies dialog at the footer
     agree = driver.find_elements_by_xpath('//*[@id="catapult-cookie-bar"]/div/div')
+    # join - close join website newsletter popup
     join = driver.find_elements_by_xpath("/html/body/div[9]/div/div/button")
 
     if agree:
@@ -86,7 +87,7 @@ def Crawl(url):
                     path_to_download = course + "\\" + title_list[unit]
                     link_to_download = links_list[title_list[link]]
                     proxy = next(proxy_cycle).get_address()
-                    make_dir(path_to_download)
+                    Make_Directory(path_to_download)
                     Download(path_to_download, link_to_download, proxy)
                     # sleep(10)
             except (IndexError, ValueError):
@@ -116,7 +117,7 @@ def Download(path, url, proxy):
 
     # sleep(5)
     # click on markdown clipper extension icon
-    CloseAds(driver)
+    Prepare_Page(driver)
     extn = [1796, 57]
     pyautogui.click(x=extn[0], y=extn[1], clicks=1, interval=0.0, button="left")
     sleep(2)
@@ -129,5 +130,5 @@ def Download(path, url, proxy):
 
 
 # Crawl("https://networklessons.com/cisco/ccna-200-301", "ccna-200-301/")
-proxy_cycle = init_proxy()
+proxy_cycle = Init_Proxy()
 Crawl("https://networklessons.com/cisco/ccna-200-301")
