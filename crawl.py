@@ -2,59 +2,18 @@ import pyautogui, os, requests, re, random
 from selenium import webdriver
 from selenium.webdriver import Chrome
 from time import sleep, time
+from itertools import cycle
 from bs4 import BeautifulSoup
 from http_request_randomizer.requests.proxy.requestProxy import RequestProxy
 from pprint import pprint
 from collections import OrderedDict
 
 
-def Download(path, url, proxies):
-    try:
-        options = webdriver.ChromeOptions()
-        unpacked_extension_path = os.path.join(os.getcwd(), "markdown-clipper")
-        options.add_argument("--load-extension={}".format(unpacked_extension_path))
-        # options.add_argument("--incognito")
-        proxy = random.choice(proxies).get_address()
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_argument("--proxy-server=http://{}".format(proxy))
-        download_path = os.path.join(os.getcwd(), "Markdown Output\\", path)
-        prefs = {"download.default_directory": download_path, "profile.default_content_settings.popups": 0, "directory_upgrade": True}
-        options.add_experimental_option("prefs", prefs)
-        options.add_experimental_option("detach", True)
-        driver = Chrome(options=options)
-        driver.get(url)
-    except Exception:
-        options = webdriver.ChromeOptions()
-        unpacked_extension_path = os.path.join(os.getcwd(), "markdown-clipper")
-        options.add_argument("--load-extension={}".format(unpacked_extension_path))
-        # options.add_argument("--incognito")
-        proxy = random.choice(proxies).get_address()
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_argument("--proxy-server=http://{}".format(proxy))
-        download_path = os.path.join(os.getcwd(), "Markdown Output\\", path)
-        prefs = {"download.default_directory": download_path, "profile.default_content_settings.popups": 0, "directory_upgrade": True}
-        options.add_experimental_option("prefs", prefs)
-        options.add_experimental_option("detach", True)
-        driver = Chrome(options=options)
-        driver.get(url)
-
-    sleep(5)
-
-    # # click to close agree cookies
-    # extn = [899, 1040]
-    # pyautogui.click(x=extn[0], y=extn[1], clicks=1, interval=0.0, button="left")
-    # sleep(5)
-
-    # click on markdown clipper extension icon
-    CloseAds(driver)
-    extn = [1796, 57]
-    pyautogui.click(x=extn[0], y=extn[1], clicks=1, interval=0.0, button="left")
-    sleep(2)
-
-    # click on save button for download dialog, mouse is automatically over save button
-    extn = pyautogui.position()
-    pyautogui.click(x=extn[0], y=extn[1], clicks=1, interval=0.0, button="left")
-    driver.close()
+def init_proxy():
+    req_proxy = RequestProxy()
+    proxies = req_proxy.get_proxy_list()
+    proxy_cycle = cycle(proxies)
+    return proxy_cycle
 
 
 def make_dir(path):
@@ -78,13 +37,9 @@ def CloseAds(driver):
             pass
 
 
-# def Crawl(url, pattern):
 def Crawl(url):
-
-    req_proxy = RequestProxy()
-    proxies = req_proxy.get_proxy_list()
-
-    proxy = random.choice(proxies).get_address()
+    # def Crawl(url, pattern):
+    proxy = next(proxy_cycle).get_address()
     proxy = {"http": f"http://{proxy}"}  # , "https": f"https://{proxy}"}
     headers = {
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36",
@@ -130,13 +85,49 @@ def Crawl(url):
                     # Unit 1 - Introduction  ----  How to study Networking  ----  https://...
                     path_to_download = course + "\\" + title_list[unit]
                     link_to_download = links_list[title_list[link]]
-                    # proxy = random.choice(proxies).get_address()
+                    proxy = next(proxy_cycle).get_address()
                     make_dir(path_to_download)
-                    Download(path_to_download, link_to_download, proxies)
+                    Download(path_to_download, link_to_download, proxy)
                     # sleep(10)
             except (IndexError, ValueError):
                 break
 
 
+def Download(path, url, proxy):
+    options = webdriver.ChromeOptions()
+    unpacked_extension_path = os.path.join(os.getcwd(), "markdown-clipper")
+    options.add_argument("--load-extension={}".format(unpacked_extension_path))
+    options.add_argument("--start-maximized")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    download_path = os.path.join(os.getcwd(), "Markdown Output\\", path)
+    prefs = {"download.default_directory": download_path, "profile.default_content_settings.popups": 0, "directory_upgrade": True}
+    options.add_experimental_option("prefs", prefs)
+    options.add_experimental_option("detach", True)
+
+    try:
+        options.add_argument("--proxy-server=http://{}".format(proxy))
+        driver = Chrome(options=options)
+        driver.get(url)
+    except Exception:
+        proxy = next(proxy_cycle).get_address()
+        options.add_argument("--proxy-server=http://{}".format(proxy))
+        driver = Chrome(options=options)
+        driver.get(url)
+
+    # sleep(5)
+    # click on markdown clipper extension icon
+    CloseAds(driver)
+    extn = [1796, 57]
+    pyautogui.click(x=extn[0], y=extn[1], clicks=1, interval=0.0, button="left")
+    sleep(2)
+
+    # click on save button for download dialog, mouse is automatically over save button
+    extn = pyautogui.position()
+    pyautogui.click(x=extn[0], y=extn[1], clicks=1, interval=0.0, button="left")
+    # sleep(10)
+    driver.close()
+
+
 # Crawl("https://networklessons.com/cisco/ccna-200-301", "ccna-200-301/")
+proxy_cycle = init_proxy()
 Crawl("https://networklessons.com/cisco/ccna-200-301")
