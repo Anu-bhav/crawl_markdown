@@ -45,6 +45,7 @@ def Crawl(url):
     headers = {
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36",
     }
+    # Initial GET to prepare all links to be crawled
     req = requests.get(url, proxies=proxy, headers=headers)
     soup = BeautifulSoup(req.text, "html.parser")
     course = soup.title.text.split("|")[0].strip()
@@ -64,8 +65,8 @@ def Crawl(url):
             text = title.text.replace(":", " -")
             title_list.append(text)
 
-        for item2 in span.find_all("a", {"class": "bellows-target"}, href=True):
-            links_list[item2.text] = item2["href"]
+        for href in span.find_all("a", {"class": "bellows-target"}, href=True):
+            links_list[href.text] = href["href"]
 
     unit_index = []
     links_index = []
@@ -88,13 +89,13 @@ def Crawl(url):
                     link_to_download = links_list[title_list[link]]
                     proxy = next(proxy_cycle).get_address()
                     Make_Directory(path_to_download)
-                    Download(path_to_download, link_to_download, proxy)
+                    Download_Page(path_to_download, link_to_download, proxy)
                     # sleep(10)
             except (IndexError, ValueError):
                 break
 
 
-def Download(path, url, proxy):
+def Download_Page(path, url, proxy):
     options = webdriver.ChromeOptions()
     unpacked_extension_path = os.path.join(os.getcwd(), "markdown-clipper")
     options.add_argument("--load-extension={}".format(unpacked_extension_path))
